@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: fastapi-saas-rbac
+Version: 0.1.0
+Summary: Production-grade multi-tenant SaaS RBAC API
+Requires-Python: >=3.12
+Requires-Dist: fastapi
+Requires-Dist: uvicorn[standard]
+Requires-Dist: sqlalchemy
+Requires-Dist: psycopg[binary]
+Requires-Dist: alembic
+Requires-Dist: pydantic
+Requires-Dist: pydantic-settings

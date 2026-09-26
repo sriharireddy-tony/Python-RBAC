@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+app/__init__.py
+fastapi_saas_rbac.egg-info/PKG-INFO
+fastapi_saas_rbac.egg-info/SOURCES.txt
+fastapi_saas_rbac.egg-info/dependency_links.txt
+fastapi_saas_rbac.egg-info/requires.txt
+fastapi_saas_rbac.egg-info/top_level.txt

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-saas-rbac"
+version = "0.1.0"
+description = "Production-grade multi-tenant SaaS RBAC API"
+requires-python = ">=3.12"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy",
+    "psycopg[binary]",
+    "alembic",
+    "pydantic",
+    "pydantic-settings",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
