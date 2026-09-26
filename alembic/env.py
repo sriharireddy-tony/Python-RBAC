@@ -74,7 +74,13 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            # Both default to False/True inconsistently and are easy to miss:
+            # without compare_server_default, autogenerate silently ignores
+            # added or changed DEFAULT clauses.
+            compare_type=True,
+            compare_server_default=True,
         )
 
         with context.begin_transaction():

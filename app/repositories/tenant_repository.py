@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.tenant import Tenant
@@ -24,6 +24,11 @@ def list_(db: Session, skip: int = 0, limit: int = 50) -> list[Tenant]:
         .limit(limit)
     )
     return list(db.execute(stmt).scalars())
+
+
+def count(db: Session) -> int:
+    stmt = select(func.count()).select_from(Tenant)
+    return db.execute(stmt).scalar_one()
 
 
 def create(db: Session, tenant: Tenant) -> Tenant:

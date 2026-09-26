@@ -33,5 +33,10 @@ def get_tenant(db: Session, tenant_id: UUID) -> Tenant:
     return tenant
 
 
-def list_tenants(db: Session, skip: int = 0, limit: int = 50) -> list[Tenant]:
-    return tenant_repository.list_(db, skip=skip, limit=limit)
+def list_tenants(
+    db: Session, skip: int = 0, limit: int = 50
+) -> tuple[list[Tenant], int]:
+    """Return one page of tenants plus the total row count."""
+    items = tenant_repository.list_(db, skip=skip, limit=limit)
+    total = tenant_repository.count(db)
+    return items, total
