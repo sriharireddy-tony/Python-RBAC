@@ -1,55 +1,63 @@
-from uuid import UUID
+"""Tenant endpoints.
 
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+The unauthenticated list/create endpoints from the first milestone are gone:
+- creating a tenant now happens through POST /auth/register, which also
+  creates the first admin and the default roles in one transaction;
+- listing every tenant was a cross-tenant data leak. A caller may only ever
+  see their OWN tenant, identified by the token rather than by a path
+  parameter, which removes the possibility of asking for someone else's.
+"""
 
-from app.db.database import get_db
+from fastapi import APIRouter, status
+
+from app.core.exceptions import NotFoundError
+from app.core.permissions import TENANTS_READ, TENANTS_UPDATE
 from app.db.models.tenant import Tenant
-from app.schemas.common import Page
+from app.db.models.user import User
+from app.dependencies.auth import DbSession
+from app.dependencies.authorization import require_permission
+from app.repositories import tenant_repository
 from app.schemas.errors import ErrorResponse
-from app.schemas.tenant import TenantCreate, TenantRead
-from app.services import tenant_service
+from app.schemas.tenant import TenantRead, TenantUpdate
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
-
-@router.post(
-    "",
-    response_model=TenantRead,
-    status_code=status.HTTP_201_CREATED,
-    responses={status.HTTP_409_CONFLICT: {"model": ErrorResponse}},
-)
-def create_tenant(
-    payload: TenantCreate,
-    db: Session = Depends(get_db),
-) -> Tenant:
-    return tenant_service.create_tenant(db, payload)
+_FORBIDDEN = {status.HTTP_403_FORBIDDEN: {"model": ErrorResponse}}
 
 
-# TODO: admin-only once authentication exists — this currently lists every
-# tenant in the system to any caller.
-@router.get("", response_model=Page[TenantRead])
-def list_tenants(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    db: Session = Depends(get_db),
-) -> Page[TenantRead]:
-    items, total = tenant_service.list_tenants(db, skip=skip, limit=limit)
-    return Page[TenantRead](
-        items=[TenantRead.model_validate(item) for item in items],
-        total=total,
-        skip=skip,
-        limit=limit,
-    )
+def _current_tenant(db: DbSession, tenant_id) -> Tenant:
+    tenant = tenant_repository.get_by_id(db, tenant_id)
+    if tenant is None:
+        raise NotFoundError("Tenant not found")
+    return tenant
 
 
 @router.get(
-    "/{tenant_id}",
+    "/me",
     response_model=TenantRead,
-    responses={status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}},
+    responses=_FORBIDDEN,
+    summary="The caller's own tenant",
 )
-def get_tenant(
-    tenant_id: UUID,
-    db: Session = Depends(get_db),
+def read_my_tenant(
+    db: DbSession,
+    current_user: User = require_permission(TENANTS_READ),
 ) -> Tenant:
-    return tenant_service.get_tenant(db, tenant_id)
+    return _current_tenant(db, current_user.tenant_id)
+
+
+@router.patch("/me", response_model=TenantRead, responses=_FORBIDDEN)
+def update_my_tenant(
+    payload: TenantUpdate,
+    db: DbSession,
+    current_user: User = require_permission(TENANTS_UPDATE),
+) -> Tenant:
+    tenant = _current_tenant(db, current_user.tenant_id)
+
+    if payload.name is not None:
+        tenant.name = payload.name
+    if payload.status is not None:
+        tenant.status = payload.status
+
+    db.commit()
+    db.refresh(tenant)
+    return tenant

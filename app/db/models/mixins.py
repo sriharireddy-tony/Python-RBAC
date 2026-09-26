@@ -23,3 +23,24 @@ class TimestampMixin:
         onupdate=func.now(),
         nullable=False,
     )
+
+
+class SoftDeleteMixin:
+    """Marks rows as deleted instead of removing them.
+
+    RBAC systems need history: "who approved this in March" must still
+    resolve after that person leaves. Every query on a soft-deletable model
+    must filter ``deleted_at IS NULL`` — applied by the ``_active()`` helper
+    at the top of each repository rather than at each call site.
+    """
+
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        default=None,
+        nullable=True,
+        index=True,
+    )
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
